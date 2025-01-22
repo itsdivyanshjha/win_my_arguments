@@ -161,29 +161,77 @@ struct ContentView: View {
 
 struct MessageBubbleView: View {
     let message: Message
+    @State private var showingActionSheet = false
+    @State private var showingShareSheet = false
     
     var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            if message.isUser {
-                Spacer()
+        VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
+            HStack(alignment: .bottom, spacing: 8) {
+                if message.isUser {
+                    Spacer()
+                    formattedText
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.blue.gradient)
+                        .foregroundStyle(.white)
+                        .clipShape(ChatBubbleShape(isUser: true))
+                        .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .trailing)
+                } else {
+                    formattedText
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(message.isError ? Color.red.gradient : Color(.systemGray5).gradient)
+                        .foregroundStyle(.white)
+                        .clipShape(ChatBubbleShape(isUser: false))
+                        .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .leading)
+                        .onLongPressGesture {
+                            showingActionSheet = true
+                        }
+                        .confirmationDialog("Message Options", 
+                                          isPresented: $showingActionSheet,
+                                          titleVisibility: .visible) {
+                            Button("Copy Text") {
+                                UIPasteboard.general.string = message.content
+                            }
+                            
+                            Button("Share") {
+                                showingShareSheet = true
+                            }
+                            
+                            Button("Cancel", role: .cancel) {}
+                        }
+                        .sheet(isPresented: $showingShareSheet) {
+                            if #available(iOS 16.0, *) {
+                                ShareSheet(items: [message.content])
+                                    .presentationDetents([.medium, .large])
+                            } else {
+                                ShareSheet(items: [message.content])
+                            }
+                        }
+                    Spacer()
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private var formattedText: some View {
+        if message.isUser {
+            return AnyView(Text(message.content))
+        } else {
+            do {
+                var options = AttributedString.MarkdownParsingOptions()
+                options.interpretedSyntax = .inlineOnlyPreservingWhitespace
                 
-                Text(message.content)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.blue.gradient)
-                    .foregroundStyle(.white)
-                    .clipShape(ChatBubbleShape(isUser: true))
-                    .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .trailing)
-            } else {
-                Text(message.content)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(message.isError ? Color.red.gradient : Color(.systemGray5).gradient)
-                    .foregroundStyle(.white)
-                    .clipShape(ChatBubbleShape(isUser: false))
-                    .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .leading)
-                
-                Spacer()
+                let attributedString = try AttributedString(markdown: message.content, options: options)
+                return AnyView(
+                    Text(attributedString)
+                        .tint(.blue)
+                        .textSelection(.enabled)
+                        .lineSpacing(4) // Add space between lines
+                )
+            } catch {
+                return AnyView(Text(message.content))
             }
         }
     }
@@ -247,6 +295,17 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
+}
+
+// Add this ShareSheet view
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

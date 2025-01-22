@@ -12,6 +12,28 @@ class ChatService {
     private let apiKey = "2d03a675-782b-48f3-af14-d253a711e3a1"
     private let baseURL = "https://api.sambanova.ai/v1/chat/completions"
     
+    private let systemPrompt = """
+    You are a helpful assistant that provides factual information and references to help win arguments. 
+
+    Format your responses using markdown:
+    - Use **bold** for important points and key terms
+    - Use *italics* for emphasis
+    - Use proper markdown links for references, e.g., [Source Title](URL)
+    - Use bullet points for lists
+
+    Structure your responses with clear sections:
+
+    **Key Points:**
+    • Start each main point with a bullet point
+    • Add supporting details with proper spacing
+
+    **Sources:**
+    • List each source on a new line
+    • Include proper markdown links
+
+    Focus on providing verifiable facts and cite sources when possible.
+    """
+    
     func sendMessage(_ message: String) async throws -> String {
         print("🚀 Starting API request process...")
         
@@ -24,7 +46,7 @@ class ChatService {
             stream: true,
             model: "Meta-Llama-3.1-8B-Instruct",
             messages: [
-                ChatMessage(role: "system", content: "You are a helpful assistant that provides factual information and references to help win arguments. Focus on providing verifiable facts and cite sources when possible."),
+                ChatMessage(role: "system", content: systemPrompt),
                 ChatMessage(role: "user", content: message)
             ]
         )
