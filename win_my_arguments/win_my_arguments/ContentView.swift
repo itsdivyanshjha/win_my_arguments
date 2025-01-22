@@ -13,6 +13,7 @@ struct ContentView: View {
     @Query(sort: \Message.timestamp) private var messages: [Message]
     @State private var newMessage: String = ""
     @State private var isLoading: Bool = false
+    @State private var showingClearConfirmation = false
     @FocusState private var isFocused: Bool
     
     private let chatService = ChatService()
@@ -47,6 +48,38 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .preferredColorScheme(.dark)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                if !messages.isEmpty {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            showingClearConfirmation = true
+                        }) {
+                            Image(systemName: "trash")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Clear Chat History",
+                isPresented: $showingClearConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Clear All", role: .destructive) {
+                    clearChat()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will delete all messages. This action cannot be undone.")
+            }
+        }
+    }
+    
+    private func clearChat() {
+        withAnimation {
+            messages.forEach { message in
+                modelContext.delete(message)
+            }
         }
     }
     

@@ -6,5 +6,7 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>CFBundleDisplayName</key>
+	<string>Win My Arguments</string>
 </dict>
 </plist>
