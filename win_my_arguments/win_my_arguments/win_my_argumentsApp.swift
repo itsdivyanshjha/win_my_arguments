@@ -7,26 +7,58 @@
 
 import SwiftUI
 import SwiftData
+import OSLog
 
 @main
 struct win_my_argumentsApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Message.self
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+    let container: ModelContainer
+    let logger = Logger(subsystem: "com.win_my_arguments", category: "app")
+    
+    init() {
+        // Set the app to always use dark mode
+        UserDefaults.standard.set(true, forKey: "AppleInterfaceStyle")
+        
+        logger.info("🚀 App initialization started")
+        
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            // Clear old data
+            if let applicationSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                try? FileManager.default.removeItem(at: applicationSupportURL.appendingPathComponent("default.store"))
+                logger.debug("Cleared old data store")
+            }
+            
+            logger.debug("Creating schema...")
+            let schema = Schema([
+                Chat.self,
+                Message.self
+            ])
+            logger.debug("Schema created with models: Chat and Message")
+            
+            logger.debug("Creating model configuration...")
+            let modelConfiguration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: false
+            )
+            logger.debug("Model configuration created")
+            
+            logger.debug("Attempting to create ModelContainer...")
+            container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            logger.info("✅ Container created successfully")
+            
         } catch {
+            logger.error("❌ Failed to create container: \(error.localizedDescription)")
             fatalError("Could not create ModelContainer: \(error)")
         }
-    }()
-
+    }
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    logger.info("📱 Main window appeared")
+                }
+                .preferredColorScheme(.dark)
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(container)
     }
 }
