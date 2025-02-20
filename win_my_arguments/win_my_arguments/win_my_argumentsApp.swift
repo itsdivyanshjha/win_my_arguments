@@ -11,6 +11,7 @@ import OSLog
 
 @main
 struct win_my_argumentsApp: App {
+    @StateObject private var authViewModel = AuthViewModel()
     let container: ModelContainer
     let logger = Logger(subsystem: "com.win_my_arguments", category: "app")
     
@@ -53,12 +54,20 @@ struct win_my_argumentsApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .onAppear {
-                    logger.info("📱 Main window appeared")
+            Group {
+                if authViewModel.isAuthenticated {
+                    ContentView()
+                        .onAppear {
+                            logger.info("📱 Main window appeared")
+                        }
+                        .environmentObject(authViewModel)
+                } else {
+                    LoginView()
+                        .environmentObject(authViewModel)
                 }
-                .preferredColorScheme(.dark)
+            }
+            .preferredColorScheme(.dark)
+            .modelContainer(container)
         }
-        .modelContainer(container)
     }
 }
