@@ -9,8 +9,8 @@ enum ChatError: Error {
 }
 
 class ChatService {
-    private let apiKey = "2d03a675-782b-48f3-af14-d253a711e3a1"
-    private let baseURL = "https://api.sambanova.ai/v1/chat/completions"
+    private let apiKey = "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"
+    private let baseURL = "https://openrouter.ai/api/v1/chat/completions"
     
     private let systemPrompt = """
     You are a helpful assistant that provides factual information and references to help win arguments. 
@@ -63,7 +63,7 @@ class ChatService {
         
         let messageData = ChatRequest(
             stream: true,
-            model: "Meta-Llama-3.1-8B-Instruct",
+            model: "openai/gpt-4-turbo",
             messages: [
                 ChatMessage(role: "system", content: systemPrompt),
                 ChatMessage(role: "user", content: message)
@@ -74,6 +74,8 @@ class ChatService {
         request.httpMethod = "POST"
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("https://win-my-arguments.app", forHTTPHeaderField: "HTTP-Referer")
+        request.addValue("Win My Arguments", forHTTPHeaderField: "X-Title")
         
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
@@ -89,6 +91,9 @@ class ChatService {
             }
             
             if !(200...299).contains(httpResponse.statusCode) {
+                if let errorString = String(data: data, encoding: .utf8) {
+                    print("❌ API Error Response: \(errorString)")
+                }
                 throw ChatError.apiError("API returned status code \(httpResponse.statusCode)")
             }
             
@@ -143,54 +148,7 @@ struct ChatMessage: Codable {
     let content: String
 }
 
-// Updated Response Models to match potential API response formats
-struct ChatResponse: Codable {
-    let id: String?
-    let choices: [Choice]
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case choices
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIfPresent(String.self, forKey: .id)
-        choices = try container.decode([Choice].self, forKey: .choices)
-    }
-}
-
-struct Choice: Codable {
-    let message: ResponseMessage
-    let finishReason: String?
-    
-    enum CodingKeys: String, CodingKey {
-        case message
-        case finishReason = "finish_reason"
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        message = try container.decode(ResponseMessage.self, forKey: .message)
-        finishReason = try container.decodeIfPresent(String.self, forKey: .finishReason)
-    }
-}
-
-struct ResponseMessage: Codable {
-    let role: String
-    let content: String
-}
-
-struct APIErrorResponse: Codable {
-    let error: APIError
-}
-
-struct APIError: Codable {
-    let message: String
-    let type: String?
-}
-
-// Add these new response models for streaming
+// Response Models
 struct StreamResponse: Codable {
     let choices: [StreamChoice]
 }
@@ -208,4 +166,14 @@ struct StreamChoice: Codable {
 struct DeltaContent: Codable {
     let content: String?
     let role: String?
+}
+
+struct APIErrorResponse: Codable {
+    let error: APIError
+}
+
+struct APIError: Codable {
+    let message: String
+    let type: String?
+    let metadata: [String: String]?
 } 
